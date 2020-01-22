@@ -16,25 +16,36 @@ def calc_offset(x_start, x_stop, y_start, y_stop, org_size, offset):
         quit(-1)
     
     h_offset = offset // 2
+
     x_start_h = x_start - h_offset
     x_stop_h = x_stop + h_offset
     y_start_h = y_start - h_offset
     y_stop_h = y_stop + h_offset
-    if x_start_h < 0:
-        x_stop =  x_stop_h + abs(x_start_h) 
-        print(' before' ,(x_start, y_start), (x_stop, y_stop))
-    if x_stop_h > org_size[0]:
-        x_start = x_start_h - abs(x_stop_h)
-        print(' before' ,(x_start, y_start), (x_stop, y_stop))
-    if y_start_h < 0:
-        y_stop = y_stop_h + abs(y_start_h)
-        print(' before' ,(x_start, y_start), (x_stop, y_stop))
-    if y_stop_h > org_size[1]:
-        y_start = y_start_h - abs(y_stop_h)
-        print(' before' ,(x_start, y_start), (x_stop, y_stop))
 
-    print('after', (x_start, y_start), (x_stop, y_stop))
-    return  x_start, x_stop, y_start, y_stop
+    print((x_start_h, y_start_h),(x_stop_h, y_stop_h))
+    x_start_offset = -1 * h_offset
+    x_stop_offset = h_offset
+    y_start_offset = -1 * h_offset
+    y_stop_offset = h_offset
+
+    if x_start_h < 0:
+        x_start_offset +=h_offset
+        x_stop_offset += h_offset 
+    if y_start_h < 0:
+        y_start_offset += h_offset
+        y_stop_offset += h_offset
+
+    if x_stop_h > org_size[0]:
+        x_start_offset += -1 * h_offset
+        x_stop_offset += -1 * h_offset
+    if y_stop_h > org_size[1]:
+        y_start_offset += -1 * h_offset
+        y_stop_offset += -1 * h_offset
+
+    print('offsets' , (x_start_offset, y_start_offset), (x_stop_offset, y_stop_offset))
+    print('after', x_start + x_start_offset, x_stop + x_stop_offset, y_start + y_start_offset, y_stop + y_stop_offset
+)
+    return  x_start + x_start_offset, x_stop + x_stop_offset, y_start + y_start_offset, y_stop + y_stop_offset
 
 def pil2cv(image):
     new_image = np.array(image, dtype=np.uint8)

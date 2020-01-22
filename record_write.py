@@ -9,7 +9,7 @@ import cv2
 
 
 def calc_offset(x_start, x_stop, y_start, y_stop, org_size, offset):
-    print('before' ,(x_start, y_start), (x_stop, y_stop))
+    #print('before' ,(x_start, y_start), (x_stop, y_stop))
 # org_size = (org_width, org_height)
     if offset > max(org_size):
         print("ERROR : requirement max(org_size) > offset")
@@ -22,7 +22,6 @@ def calc_offset(x_start, x_stop, y_start, y_stop, org_size, offset):
     y_start_h = y_start - h_offset
     y_stop_h = y_stop + h_offset
 
-    print((x_start_h, y_start_h),(x_stop_h, y_stop_h))
     x_start_offset = -1 * h_offset
     x_stop_offset = h_offset
     y_start_offset = -1 * h_offset
@@ -42,9 +41,8 @@ def calc_offset(x_start, x_stop, y_start, y_stop, org_size, offset):
         y_start_offset += -1 * h_offset
         y_stop_offset += -1 * h_offset
 
-    print('offsets' , (x_start_offset, y_start_offset), (x_stop_offset, y_stop_offset))
-    print('after', x_start + x_start_offset, x_stop + x_stop_offset, y_start + y_start_offset, y_stop + y_stop_offset
-)
+    #print('offsets' , (x_start_offset, y_start_offset), (x_stop_offset, y_stop_offset))
+    #print('after', x_start + x_start_offset, x_stop + x_stop_offset, y_start + y_start_offset, y_stop + y_stop_offset)
     return  x_start + x_start_offset, x_stop + x_stop_offset, y_start + y_start_offset, y_stop + y_stop_offset
 
 def pil2cv(image):
@@ -115,10 +113,13 @@ def img_split(example, cnt_x, cnt_y, offset=100):
             x_stop  = ((x+1) * x_step)
             y_start = (y * y_step) 
             y_stop  = ((y+1) * y_step) 
-            sp_img = cp_img[y_start:y_stop, x_start:x_stop,:]
             org_size = (org_width, org_height)
-            #org_size = (sp_img.shape[1], sp_img.shape[0])
+            #print("---")
+            #print('old',(x_start, y_start), (x_stop, y_stop))
             x_start, x_stop, y_start, y_stop = calc_offset(x_start, x_stop, y_start, y_stop, org_size, offset)
+            #print('new',(x_start, y_start), (x_stop, y_stop))
+            sp_img = cp_img.copy()[y_start:y_stop, x_start:x_stop,:]
+            #org_size = (sp_img.shape[1], sp_img.shape[0])
             dst_img.append(sp_img)
             for xmax, ymax, xmin, ymin, label in zip(xmaxs, ymaxs, xmins, ymins, labels):
                 org_start_x  = int(xmin * org_width)
@@ -129,10 +130,15 @@ def img_split(example, cnt_x, cnt_y, offset=100):
 
                 #in the range
                 if (x_start < org_start_x < x_stop) and (y_start < org_start_y < y_stop) and (x_start < org_stop_x < x_stop) and (y_start < org_stop_y < y_stop):
-                    cur_w =  org_width
+                    #print(sp_img.shape)
+                    #print("hogehogehoge")
+                    #print(y_stop - y_start, x_stop - x_start)
+                    cur_w =  org_width 
                     cur_h = org_height
-                    start = ( int(cur_w * xmin) - (x*x_step), int(cur_h * ymin) - (y * y_step))
-                    stop = ( int( cur_w * xmax) - (x*x_step), int(cur_h * ymax) - (y * y_step))
+                    #print(cur_h, cur_w)
+                    start = ( int(cur_w * xmin) - (x*(x_step - offset)), int(cur_h * ymin) - (y * (y_step - offset)))
+                    stop =  ( int(cur_w * xmax) - (x*(x_step - offset)), int(cur_h * ymax) - (y * (y_step - offset)))
+                    print(start,stop, sp_img.shape)
                     cv2.rectangle(sp_img, start, stop,(255, 0, 255), 4)
 
                     dst_xmaxs.append(xmax)

@@ -7,6 +7,35 @@ from tensorflow.train import Example
 import io
 import cv2
 
+
+def calc_offset(x_start, x_stop, y_start, y_stop, org_size, offset):
+    print('before' ,(x_start, y_start), (x_stop, y_stop))
+# org_size = (org_width, org_height)
+    if offset > max(org_size):
+        print("ERROR : requirement max(org_size) > offset")
+        quit(-1)
+    
+    h_offset = offset // 2
+    x_start_h = x_start - h_offset
+    x_stop_h = x_stop + h_offset
+    y_start_h = y_start - h_offset
+    y_stop_h = y_stop + h_offset
+    if x_start_h < 0:
+        x_stop =  x_stop_h + abs(x_start_h) 
+        print(' before' ,(x_start, y_start), (x_stop, y_stop))
+    if x_stop_h > org_size[0]:
+        x_start = x_start_h - abs(x_stop_h)
+        print(' before' ,(x_start, y_start), (x_stop, y_stop))
+    if y_start_h < 0:
+        y_stop = y_stop_h + abs(y_start_h)
+        print(' before' ,(x_start, y_start), (x_stop, y_stop))
+    if y_stop_h > org_size[1]:
+        y_start = y_start_h - abs(y_stop_h)
+        print(' before' ,(x_start, y_start), (x_stop, y_stop))
+
+    print('after', (x_start, y_start), (x_stop, y_stop))
+    return  x_start, x_stop, y_start, y_stop
+
 def pil2cv(image):
     new_image = np.array(image, dtype=np.uint8)
     if new_image.ndim == 2:
@@ -67,19 +96,20 @@ def img_split(example, cnt_x, cnt_y, offset=100):
     dst_ymins = []
     dst_img = []
 
-
-    print("len :" ,len(xmaxs))
 #TODO add offset
     for x in range(cnt_x):
         for y in range(cnt_y):
-            x_start = (x * x_step)
+
+            x_start = (x * x_step) 
             x_stop  = ((x+1) * x_step)
             y_start = (y * y_step) 
             y_stop  = ((y+1) * y_step) 
             sp_img = cp_img[y_start:y_stop, x_start:x_stop,:]
+            org_size = (org_width, org_height)
+            #org_size = (sp_img.shape[1], sp_img.shape[0])
+            x_start, x_stop, y_start, y_stop = calc_offset(x_start, x_stop, y_start, y_stop, org_size, offset)
             dst_img.append(sp_img)
             for xmax, ymax, xmin, ymin, label in zip(xmaxs, ymaxs, xmins, ymins, labels):
-                #print(xmax, ymax, xmin, ymin, label)
                 org_start_x  = int(xmin * org_width)
                 org_start_y = int(ymin * org_height)
                 org_stop_x = int(xmax * org_width)
@@ -93,9 +123,6 @@ def img_split(example, cnt_x, cnt_y, offset=100):
                     start = ( int(cur_w * xmin) - (x*x_step), int(cur_h * ymin) - (y * y_step))
                     stop = ( int( cur_w * xmax) - (x*x_step), int(cur_h * ymax) - (y * y_step))
                     cv2.rectangle(sp_img, start, stop,(255, 0, 255), 4)
-                    print('draw rectangle ', start, stop, ' original shape : ' , sp_img.shape)
-                    print('x heniki: ', (x_start, x_stop), ' y heniki :', (y_start, y_stop))
-                    #debug rectangle
 
                     dst_xmaxs.append(xmax)
                     dst_ymaxs.append(ymax)
@@ -114,7 +141,7 @@ if __name__ == '__main__':
     for string_record in record_iterator:
         example = tf.train.Example()
         example.ParseFromString(string_record)
-        img_split(example, 2, 2, offset=0)
+        img_split(example, 2, 2, offset=100)
 
   #  writer = tf.python_io.TFRecordWriter("test.tfrecord")
   #key: "image/encoded"

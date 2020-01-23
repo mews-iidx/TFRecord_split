@@ -68,7 +68,7 @@ def add_num(fname, n):
     return base + str(n) + prefix
 
 
-def img_split(example, cnt_x, cnt_y, offset=100):
+def img_split(example, cnt_x, cnt_y, offset=100, output_path='out'):
 
 #get example values 
     xmaxs = example.features.feature["image/object/bbox/xmax"].float_list.value
@@ -115,7 +115,7 @@ def img_split(example, cnt_x, cnt_y, offset=100):
                 org_start_y = int(ymin * org_height)
                 org_stop_x = int(xmax * org_width)
                 org_stop_y = int(ymax * org_height)
-                cv2.rectangle(img, (org_start_x, org_start_y), (org_stop_x, org_stop_y), (255,0,0),4)
+                #cv2.rectangle(img, (org_start_x, org_start_y), (org_stop_x, org_stop_y), (255,0,0),4)
 
                 #in the range
                 if (x_start < org_start_x < x_stop) and (y_start < org_start_y < y_stop) and (x_start < org_stop_x < x_stop) and (y_start < org_stop_y < y_stop):
@@ -126,24 +126,25 @@ def img_split(example, cnt_x, cnt_y, offset=100):
                     #print(" original x, y", (int(org_width * xmin), int(org_height * ymin)), (int(org_width * xmax),int(org_height * ymax)))
                     start = ( org_start_x - x_offset, org_start_y - y_offset)
                     stop =  ( org_stop_x - x_offset, org_stop_y - y_offset)
-                    cv2.rectangle(sp_img, start, stop,(255, 0, 255), 4)
+                    #cv2.rectangle(sp_img, start, stop,(255, 0, 255), 4)
 
-                    dst_xmaxs.append((int(org_width * xmax) - (x*(x_step - offset))) / (x_stop - x_start ))
-                    dst_ymaxs.append((int(org_height * ymax) - (y*(y_step - offset))) / (y_stop - y_start))
-                    dst_xmins.append((int(org_width * xmin) - (x*(x_step - offset))) / (x_stop - x_start ))
-                    dst_ymins.append((int(org_height * ymin) - (y*(y_step - offset))) / (y_stop - y_start))
+                    dst_xmaxs.append(stop[0] / (x_stop - x_start ))
+                    dst_ymaxs.append(stop[1] / (y_stop - y_start))
+                    dst_xmins.append(start[0] / (x_stop - x_start ))
+                    dst_ymins.append(start[1] / (y_stop - y_start))
                     dst_labels.append(label)
-            fname = 'img_{}_{}.jpg'.format(x,y)
-            cv2.imwrite(fname, sp_img)
+            #fname = 'img_{}_{}.jpg'.format(x,y)
+            #cv2.imwrite(fname, sp_img)
 
 
 
 ###WRITE TF RECORD
             img_str = cv2.imencode('.' + fmt,sp_img)[1].tostring()
             fname = add_num(org_fname, y + (x*cnt_y))
-            writer = tf.python_io.TFRecordWriter(os.path.splitext(fname)[0] + '.tfrecord')
-            height = int(y_stop - y_start)
-            width =  int(x_stop - x_start)
+            writer = tf.python_io.TFRecordWriter(os.path.join(output_path, os.path.splitext(fname)[0] + '.tfrecord'))
+            width =  (org_width //  cnt_x) + offset
+            height =  (org_height //  cnt_y) + offset
+            print(width, height)
             print(fname , width, height, sp_img.shape)
             example = tf.train.Example(features=tf.train.Features(feature={
                 'image/height': tf.train.Feature(int64_list=tf.train.Int64List(value=[height])),
@@ -157,7 +158,7 @@ def img_split(example, cnt_x, cnt_y, offset=100):
                 "image/object/class/label" : tf.train.Feature(int64_list=tf.train.Int64List(value=dst_labels))
             }))
             writer.write(example.SerializeToString())
-        cv2.imwrite("original.jpg", img)
+        #cv2.imwrite("original.jpg", img)
 
         #f = open("test.jpg", "wb")
         #f.write(img_str)

@@ -10,7 +10,6 @@ import cv2
 
 
 def calc_offset(x_start, x_stop, y_start, y_stop, org_size, offset):
-    print("  before", (x_start, x_stop, y_start, y_stop, org_size, offset))
     if offset > max(org_size):
         print("ERROR : requirement max(org_size) > offset")
         quit(-1)
@@ -41,7 +40,6 @@ def calc_offset(x_start, x_stop, y_start, y_stop, org_size, offset):
         y_start_offset += -1 * h_offset
         y_stop_offset += -1 * h_offset
 
-    print('  after', (x_start + x_start_offset, x_stop + x_stop_offset, y_start + y_start_offset, y_stop + y_stop_offset))
 
     return  x_start + x_start_offset, x_stop + x_stop_offset, y_start + y_start_offset, y_stop + y_stop_offset
 
@@ -106,7 +104,6 @@ def img_split(example, cnt_x, cnt_y, offset=100):
             y_stop  = ((y+1) * y_step) 
             org_size = (org_width, org_height)
             x_start, x_stop, y_start, y_stop = calc_offset(x_start, x_stop, y_start, y_stop, org_size, offset)
-            print("start,  stop", (x_start, y_start), (x_stop, y_stop))
             sp_img = cp_img.copy()[y_start:y_stop, x_start:x_stop,:]
             dst_labels = []
             dst_xmaxs = []
@@ -122,13 +119,13 @@ def img_split(example, cnt_x, cnt_y, offset=100):
 
                 #in the range
                 if (x_start < org_start_x < x_stop) and (y_start < org_start_y < y_stop) and (x_start < org_stop_x < x_stop) and (y_start < org_stop_y < y_stop):
-                    x_offset = (x * x_step) + (x * offset)
-                    y_offset = (y * y_step) + (y * offset)
+                    x_offset = (x * x_step) - ((x * offset) // 2)
+                    y_offset = (y * y_step) - ((y * offset) // 2)
 
-                    print(" original x, y", (int(org_width * xmin), int(org_height * ymin)), (int(org_width * xmax),int(org_height * ymax)))
-                    print(" x_offset ,y_offset ", x_offset, y_offset)
-                    start = ( int(org_width * xmin) + x_offset, int(org_height * ymin) + y_offset)
-                    stop =  ( int(org_width * xmax) + x_offset, int(org_height * ymax) + y_offset)
+
+                    #print(" original x, y", (int(org_width * xmin), int(org_height * ymin)), (int(org_width * xmax),int(org_height * ymax)))
+                    start = ( org_start_x - x_offset, org_start_y - y_offset)
+                    stop =  ( org_stop_x - x_offset, org_stop_y - y_offset)
                     cv2.rectangle(sp_img, start, stop,(255, 0, 255), 4)
 
                     dst_xmaxs.append((int(org_width * xmax) - (x*(x_step - offset))) / (x_stop - x_start ))
@@ -138,6 +135,7 @@ def img_split(example, cnt_x, cnt_y, offset=100):
                     dst_labels.append(label)
             fname = 'img_{}_{}.jpg'.format(x,y)
             cv2.imwrite(fname, sp_img)
+
 
 
 ###WRITE TF RECORD
@@ -171,4 +169,5 @@ if __name__ == '__main__':
     for string_record in record_iterator:
         example = tf.train.Example()
         example.ParseFromString(string_record)
+        #img_split(example, 3, 3)
         img_split(example, 3, 3, offset=100)

@@ -9,6 +9,7 @@ import os
 import cv2
 import sys
 import glob
+import uuid
 
 def usage():
     print('Usage: ' + sys.argv[0] + ' <records_dir_path> <output_dir_path>')
@@ -145,7 +146,8 @@ def img_split(example, cnt_x, cnt_y, offset=100, output_path='out'):
 
 ###WRITE TF RECORD
             img_str = cv2.imencode('.' + fmt,sp_img)[1].tostring()
-            fname = add_num(org_fname, y + (x*cnt_y))
+            #fname = add_num(org_fname, y + (x*cnt_y))
+            fname = str(uuid.uuid4()) + '.png'
             writer = tf.python_io.TFRecordWriter(os.path.join(output_path, os.path.splitext(fname)[0] + '.tfrecord'))
             width =  (org_width //  cnt_x) + offset
             height =  (org_height //  cnt_y) + offset

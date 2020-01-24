@@ -7,6 +7,11 @@ from tensorflow.train import Example
 import io
 import os
 import cv2
+import sys
+import glob
+
+def usage():
+    print('Usage: ' + sys.argv[0] + ' <records_dir_path> <output_dir_path>')
 
 
 def calc_offset(x_start, x_stop, y_start, y_stop, org_size, offset):
@@ -155,7 +160,7 @@ def img_split(example, cnt_x, cnt_y, offset=100, output_path='out'):
                 "image/object/bbox/xmin" : tf.train.Feature(float_list = tf.train.FloatList(value=dst_xmins)),
                 "image/object/bbox/ymax" : tf.train.Feature(float_list = tf.train.FloatList(value=dst_ymaxs)),
                 "image/object/bbox/ymin" : tf.train.Feature(float_list = tf.train.FloatList(value=dst_ymins)),
-                "image/object/class/label" : tf.train.Feature(int64_list=tf.train.Int64List(value=dst_labels))
+                "image/object/class/label" : tf.train.Feature(int65_list=tf.train.Int64List(value=dst_labels))
             }))
             writer.write(example.SerializeToString())
         #cv2.imwrite("original.jpg", img)
@@ -165,10 +170,24 @@ def img_split(example, cnt_x, cnt_y, offset=100, output_path='out'):
 
 
 if __name__ == '__main__':
-    record_iterator = tf.python_io.tf_record_iterator('data/test_data.tfrecord')
+    argc = len(sys.argv)
+    if argc < 3:
+        usage()
+        quit()
     
-    for string_record in record_iterator:
-        example = tf.train.Example()
-        example.ParseFromString(string_record)
-        #img_split(example, 3, 3)
-        img_split(example, 3, 3, offset=100)
+    input_path = sys.argv[1]
+    output_path = sys.argv[2]
+
+    if not os.path.exists(output_path):
+        os.mkdir(output_path)
+
+    input_files = glob.glob(os.path.join(input_path, '*.tfrecord'))
+
+    for input_file in input_files:
+        record_iterator = tf.python_io.tf_record_iterator(input_file)
+        
+        for string_record in record_iterator:
+            example = tf.train.Example()
+            example.ParseFromString(string_record)
+            #img_split(example, 3, 3)
+            img_split(example, 3, 3, offset=100, output_path=output_path)

@@ -84,7 +84,15 @@ def img_split(example, cnt_x, cnt_y, offset=100, output_path='out'):
     labels = example.features.feature["image/object/class/label"].int64_list.value
     org_height = example.features.feature["image/height"].int64_list.value[0]
     org_width = example.features.feature["image/width"].int64_list.value[0]
+
+    if not org_width ==3840 and org_height == 2140:
+        return
     org_fname = example.features.feature["image/filename"].bytes_list.value[0].decode('utf-8')
+    if not 'video' in org_fname:
+        print("break")
+        return
+
+    org_fname = str(uuid.uuid4()) + '.png'
     image = example.features.feature["image/encoded"].bytes_list.value[0]
     fmt = example.features.feature["image/format"].bytes_list.value[0].decode('utf-8')
     print(org_width, org_height)
@@ -146,8 +154,7 @@ def img_split(example, cnt_x, cnt_y, offset=100, output_path='out'):
 
 ###WRITE TF RECORD
             img_str = cv2.imencode('.' + fmt,sp_img)[1].tostring()
-            #fname = add_num(org_fname, y + (x*cnt_y))
-            fname = str(uuid.uuid4()) + '.png'
+            fname = add_num(org_fname, y + (x*cnt_y))
             writer = tf.python_io.TFRecordWriter(os.path.join(output_path, os.path.splitext(fname)[0] + '.tfrecord'))
             width =  (org_width //  cnt_x) + offset
             height =  (org_height //  cnt_y) + offset
@@ -162,7 +169,7 @@ def img_split(example, cnt_x, cnt_y, offset=100, output_path='out'):
                 "image/object/bbox/xmin" : tf.train.Feature(float_list = tf.train.FloatList(value=dst_xmins)),
                 "image/object/bbox/ymax" : tf.train.Feature(float_list = tf.train.FloatList(value=dst_ymaxs)),
                 "image/object/bbox/ymin" : tf.train.Feature(float_list = tf.train.FloatList(value=dst_ymins)),
-                "image/object/class/label" : tf.train.Feature(int65_list=tf.train.Int64List(value=dst_labels))
+                "image/object/class/label" : tf.train.Feature(int64_list=tf.train.Int64List(value=dst_labels))
             }))
             writer.write(example.SerializeToString())
         #cv2.imwrite("original.jpg", img)

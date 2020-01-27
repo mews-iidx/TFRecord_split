@@ -1,3 +1,4 @@
+import cv2
 # data scheme: (x_start, y_start, x_stop, y_stop)
 OFFSETS = [[ (   0,   0,   1,   1), (-0.5,   0, 0.5,   1), (  -1,   0,   0,   1) ],
            [ (   0,-0.5,   1, 0.5), (-0.5,-0.5, 0.5, 0.5), (  -1,-0.5,   0, 0.5) ],
@@ -46,8 +47,17 @@ def split_img(img, x_cnt, y_cnt, offset_size=100):
 
     return sp_imgs
 
+def concat_img(sp_imgs, x_cnt, y_cnt):
+	h_imgs = []
+	for y in range(y_cnt):
+	    idxs = [ i + y*y_cnt for i in range(x_cnt) ]
+	    imgs = [dst_imgs[i] for i in idxs]
+	    h_imgs.append(cv2.hconcat(imgs))
+	concat_img = cv2.vconcat(h_imgs)
+	return concat_img
+
+
 if __name__ == '__main__':
-    import cv2
     img = cv2.imread('/home/yamauchi/Downloads/titanfall2.jpg')
     x_cnt = 2
     y_cnt = 4

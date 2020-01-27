@@ -9,6 +9,7 @@ import os
 import cv2
 import sys
 import glob
+import offset
 
 def usage():
     print('Usage: ' + sys.argv[0] + ' <records_dir_path> <output_dir_path>')

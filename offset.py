@@ -32,6 +32,7 @@ def get_offset(x, y, x_cnt, y_cnt):
 def split_img(img, x_cnt, y_cnt, offset_size=100):
     cp_img = img.copy()
     sp_imgs = []
+    points = []
     org_h, org_w, c = img.shape
     h_step = org_h // y_cnt
     w_step = org_w // x_cnt
@@ -44,8 +45,9 @@ def split_img(img, x_cnt, y_cnt, offset_size=100):
             stop_y  = int(((y+1)*h_step) + (offsets[3] * offset_size))
             sp_img = cp_img[start_y:stop_y, start_x:stop_x, :]
             sp_imgs.append(sp_img)
+            points.append([start_x, start_y, stop_x, stop_y])
 
-    return sp_imgs
+    return sp_imgs, points
 
 def concat_img(sp_imgs, x_cnt, y_cnt):
 	h_imgs = []

@@ -11,6 +11,13 @@ import glob
 import copy
 from offset import split_img
 
+#definitions 
+XCNT = 3
+YCNT = 3
+
+def usage():
+    print('Usage: ' + sys.argv[0] + ' <records_dir_path> <output_dir_path>')
+
 def pil2cv(image):
     new_image = np.array(image, dtype=np.uint8)
     if new_image.ndim == 2:
@@ -31,8 +38,6 @@ def cv2pil(image):
     new_image = Image.fromarray(new_image)
     return new_image
 
-def usage():
-    print('Usage: ' + sys.argv[0] + ' <records_dir_path> <output_dir_path>')
 
 def parse_record(input_file):
     record_iterator = tf.python_io.tf_record_iterator(input_file)
@@ -151,14 +156,12 @@ def get_imgidx(idx, xcnt, ycnt):
 
 
 if __name__ == '__main__':
-    #argc = len(sys.argv)
-    #if argc < 3:
-    #    usage()
-    #    quit()
-    #input_path = sys.argv[1]
-    input_path = './'
-    input_path = '/home/yamauchi/tensorflow/develop/trained_models/201912_datasets/eval'
-    output_path = 'out_test/'
+    argc = len(sys.argv)
+    if argc < 3:
+        usage()
+        quit()
+    input_path = sys.argv[1]
+    output_path = sys.argv[2]
 
     if not os.path.exists(output_path):
         os.mkdir(output_path)
@@ -194,8 +197,8 @@ if __name__ == '__main__':
         img = byte2cv(bimage)
 
         #split image xcnt x ycnt
-        xcnt = 3
-        ycnt = 3
+        xcnt = XCNT
+        ycnt = YCNT
         sp_imgs, points = split_img(img, xcnt, ycnt, offset_size=0)
 
         #split images processing
@@ -215,7 +218,5 @@ if __name__ == '__main__':
             example = put_example(ystep, xstep, img, org_fname, fmt, dst_xmaxs, dst_ymaxs, dst_xmins, dst_ymins, dst_labels)
             writer.write(example.SerializeToString())
             print(' saved : ' + record_name)
-
-        print("DEBUG QUIT")
-        break
-
+            print("DEBUG QUIT")
+            quit()

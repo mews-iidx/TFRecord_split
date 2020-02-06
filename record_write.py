@@ -98,14 +98,11 @@ def norm(org_width, org_height, xmaxs, ymaxs, xmins, ymins):
     return xmaxs, ymaxs, xmins, ymins
     
 def point2child_point(xidx, yidx, xstep, ystep, xmaxs, ymaxs, xmins, ymins):
-    print(xstep, ystep)
     for idx, xmax, ymax, xmin, ymin in zip(range(len(xmaxs)), xmaxs, ymaxs, xmins, ymins):
-        print( (xidx, yidx), (xmins[idx], ymins[idx]), (xmaxs[idx], ymaxs[idx]))
         xmaxs[idx] = int(xmax - ((xidx * xstep))) + (OFFSET_SIZE + OFFSET_SIZE/2) * xidx
         ymaxs[idx] = int(ymax - ((yidx * ystep))) + (OFFSET_SIZE + OFFSET_SIZE/2) * yidx
         xmins[idx] = int(xmin - ((xidx * xstep))) + (OFFSET_SIZE + OFFSET_SIZE/2) * xidx
         ymins[idx] = int(ymin - ((yidx * ystep))) + (OFFSET_SIZE + OFFSET_SIZE/2) * yidx
-        print( (xidx, yidx),(xmins[idx], ymins[idx]), (xmaxs[idx], ymaxs[idx]))
     return xmaxs, ymaxs, xmins, ymins
 
 def in_range(point, xmaxs, ymaxs, xmins, ymins, labels):
@@ -181,7 +178,7 @@ if __name__ == '__main__':
             #get values
             classnames, bimage, xmaxs, ymaxs, xmins, ymins, labels, org_height, org_width, org_fname, fmt = get_instances(parsed_feature)
         except:
-            print("skipping Error file : " + input_file, file=sys.stderr)
+            print("skipping Error file : " + input_file)
             continue
         
         #ignore cases
@@ -191,7 +188,7 @@ if __name__ == '__main__':
         ## is November data
         decode_name = classnames[0].decode('utf-8')
         if is_november(decode_name):
-            print(" skipping class : " + decode_name)
+            print(" skipping november's file : " + input_file)
             continue
         if not 'video' in org_fname:
             continue
@@ -214,10 +211,6 @@ if __name__ == '__main__':
             if len(dst_xmaxs) ==0:
                 continue
 
-            print("IMG ID" , idx)
-            if idx == 0:
-                print("DEBUG CONTINUE")
-                continue
             x, y = get_imgidx(idx, xcnt, ycnt)
             dst_xmaxs, dst_ymaxs, dst_xmins, dst_ymins = point2child_point(x, y, xstep, ystep, dst_xmaxs, dst_ymaxs, dst_xmins, dst_ymins)
             dst_xmaxs, dst_ymaxs, dst_xmins, dst_ymins = norm(xstep, ystep, dst_xmaxs, dst_ymaxs, dst_xmins, dst_ymins)
@@ -228,5 +221,3 @@ if __name__ == '__main__':
             example = put_example(ystep, xstep, img, org_fname, fmt, dst_xmaxs, dst_ymaxs, dst_xmins, dst_ymins, dst_labels)
             writer.write(example.SerializeToString())
             print(' saved : ' + record_name)
-            #print("DEBUG QUIT")
-            #quit()

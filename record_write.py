@@ -9,11 +9,12 @@ import cv2
 import sys
 import glob
 import copy
-from offset import split_img
+from calc_offset import split_img
 
 #definitions 
 XCNT = 3
 YCNT = 3
+OFFSET_SIZE = 100
 
 def usage():
     print('Usage: ' + sys.argv[0] + ' <records_dir_path> <output_dir_path>')
@@ -97,11 +98,14 @@ def norm(org_width, org_height, xmaxs, ymaxs, xmins, ymins):
     return xmaxs, ymaxs, xmins, ymins
     
 def point2child_point(xidx, yidx, xstep, ystep, xmaxs, ymaxs, xmins, ymins):
+    print(xstep, ystep)
     for idx, xmax, ymax, xmin, ymin in zip(range(len(xmaxs)), xmaxs, ymaxs, xmins, ymins):
-        xmaxs[idx] = int(xmax - (xidx * xstep))
-        ymaxs[idx] = int(ymax - (yidx * ystep))
-        xmins[idx] = int(xmin - (xidx * xstep))
-        ymins[idx] = int(ymin - (yidx * ystep))
+        print( (xidx, yidx), (xmins[idx], ymins[idx]), (xmaxs[idx], ymaxs[idx]))
+        xmaxs[idx] = int(xmax - ((xidx * xstep))) + (OFFSET_SIZE + OFFSET_SIZE/2) * xidx
+        ymaxs[idx] = int(ymax - ((yidx * ystep))) + (OFFSET_SIZE + OFFSET_SIZE/2) * yidx
+        xmins[idx] = int(xmin - ((xidx * xstep))) + (OFFSET_SIZE + OFFSET_SIZE/2) * xidx
+        ymins[idx] = int(ymin - ((yidx * ystep))) + (OFFSET_SIZE + OFFSET_SIZE/2) * yidx
+        print( (xidx, yidx),(xmins[idx], ymins[idx]), (xmaxs[idx], ymaxs[idx]))
     return xmaxs, ymaxs, xmins, ymins
 
 def in_range(point, xmaxs, ymaxs, xmins, ymins, labels):
@@ -189,6 +193,8 @@ if __name__ == '__main__':
         if is_november(decode_name):
             print(" skipping class : " + decode_name)
             continue
+        if not 'video' in org_fname:
+            continue
 
         #trans norm points to denorm points
         xmaxs, ymaxs, xmins, ymins = denorm(org_width, org_height, xmaxs, ymaxs, xmins, ymins)
@@ -199,7 +205,7 @@ if __name__ == '__main__':
         #split image xcnt x ycnt
         xcnt = XCNT
         ycnt = YCNT
-        sp_imgs, points = split_img(img, xcnt, ycnt, offset_size=0)
+        sp_imgs, points = split_img(img, xcnt, ycnt, offset_size=OFFSET_SIZE)
 
         #split images processing
         for idx, img in enumerate(sp_imgs):
@@ -208,6 +214,10 @@ if __name__ == '__main__':
             if len(dst_xmaxs) ==0:
                 continue
 
+            print("IMG ID" , idx)
+            if idx == 0:
+                print("DEBUG CONTINUE")
+                continue
             x, y = get_imgidx(idx, xcnt, ycnt)
             dst_xmaxs, dst_ymaxs, dst_xmins, dst_ymins = point2child_point(x, y, xstep, ystep, dst_xmaxs, dst_ymaxs, dst_xmins, dst_ymins)
             dst_xmaxs, dst_ymaxs, dst_xmins, dst_ymins = norm(xstep, ystep, dst_xmaxs, dst_ymaxs, dst_xmins, dst_ymins)
@@ -218,5 +228,5 @@ if __name__ == '__main__':
             example = put_example(ystep, xstep, img, org_fname, fmt, dst_xmaxs, dst_ymaxs, dst_xmins, dst_ymins, dst_labels)
             writer.write(example.SerializeToString())
             print(' saved : ' + record_name)
-            print("DEBUG QUIT")
-            quit()
+            #print("DEBUG QUIT")
+            #quit()

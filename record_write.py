@@ -72,7 +72,15 @@ def get_instances(parsed_feature):
     org_width  = parsed_feature["image/width"].int64_list.value[0]
     org_fname  = parsed_feature["image/filename"].bytes_list.value[0].decode('utf-8')
     fmt        = parsed_feature["image/format"].bytes_list.value[0].decode('utf-8')
-    return classnames, image, xmaxs, ymaxs, xmins, ymins, labels, org_height, org_width, org_fname, fmt
+
+    truncated  = parsed_feature['image/object/truncated'].int64_list.value
+    text       = parsed_feature['image/object/class/text'].bytes_list.value
+    view       = parsed_feature['image/object/view'].bytes_list.value
+    difficult  = parsed_feature['image/object/difficult'].int64_list.value
+    sha256     = parsed_feature['image/key/sha256'].bytes_list.value[0].decode('utf-8')
+    source_id  = parsed_feature['image/source_id'].bytes_list.value[0].decode('utf-8')
+
+    return classnames, image, xmaxs, ymaxs, xmins, ymins, labels, org_height, org_width, org_fname, fmt, truncated, text, source_id, view, difficult, sha256
 
 
 def denorm_point(length, points):
@@ -105,13 +113,23 @@ def point2child_point(xidx, yidx, xstep, ystep, xmaxs, ymaxs, xmins, ymins):
         ymins[idx] = int(ymin - ((yidx * ystep))) + (OFFSET_SIZE + OFFSET_SIZE/2) * yidx
     return xmaxs, ymaxs, xmins, ymins
 
-def in_range(point, xmaxs, ymaxs, xmins, ymins, labels):
-    dst_xmaxs  = []
-    dst_ymaxs  = []
-    dst_xmins  = []
-    dst_ymins  = []
-    dst_labels = []
-    for idx, xmax, ymax, xmin, ymin, label in zip(range(len(xmaxs)), xmaxs, ymaxs, xmins, ymins, labels):
+def in_range(point, xmaxs, ymaxs, xmins, ymins, labels, difficult, view, text, truncated):
+    dst_xmaxs       = []
+    dst_ymaxs       = []
+    dst_xmins       = []
+    dst_ymins       = []
+    dst_labels      = []
+
+    dst_difficults  = []
+    dst_views       = []
+    dst_texts       = []
+    dst_truncateds  = []
+    print("hogeeeee")
+    print(type(difficult))
+    print(type(view))
+    print(type(text))
+    print(type(truncated))
+    for idx, xmax, ymax, xmin, ymin, label, diff, v, t, trunc  in zip(range(len(xmaxs)), xmaxs, ymaxs, xmins, ymins, labels, difficult, view, text, truncated):
         if not point[0] < xmax < point[2]:
             continue
         if not point[1] < ymax < point[3]:
@@ -125,13 +143,17 @@ def in_range(point, xmaxs, ymaxs, xmins, ymins, labels):
         dst_xmins.append(xmin)
         dst_ymins.append(ymin)
         dst_labels.append(label)
-    return dst_xmaxs, dst_ymaxs, dst_xmins, dst_ymins, dst_labels
+        dst_difficults.append(diff)
+        dst_views.append(v)
+        dst_texts.append(t)
+        dst_truncateds.append(trunc)
+    return dst_xmaxs, dst_ymaxs, dst_xmins, dst_ymins, dst_labels, dst_difficults, dst_views, dst_texts, dst_truncateds
 
 def img_encode(fmt, img):
     img_str = cv2.imencode('.' + fmt, img)[1].tostring()
     return img_str
 
-def put_example(height, width, img, fname, fmt, dst_xmaxs, dst_ymaxs, dst_xmins, dst_ymins, dst_labels):
+def put_example(height, width, img, fname, fmt, dst_xmaxs, dst_ymaxs, dst_xmins, dst_ymins, dst_labels, dst_difficults, dst_views, dst_texts, dst_truncateds, source_id, sha256):
     img_str = img_encode(fmt, img)
     example = tf.train.Example(features=tf.train.Features(feature={
         'image/height': tf.train.Feature(int64_list=tf.train.Int64List(value=[height])),
@@ -142,8 +164,16 @@ def put_example(height, width, img, fname, fmt, dst_xmaxs, dst_ymaxs, dst_xmins,
         "image/object/bbox/xmin" : tf.train.Feature(float_list = tf.train.FloatList(value=dst_xmins)),
         "image/object/bbox/ymax" : tf.train.Feature(float_list = tf.train.FloatList(value=dst_ymaxs)),
         "image/object/bbox/ymin" : tf.train.Feature(float_list = tf.train.FloatList(value=dst_ymins)),
-        "image/object/class/label" : tf.train.Feature(int64_list=tf.train.Int64List(value=dst_labels))
+        "image/object/class/label" : tf.train.Feature(int64_list=tf.train.Int64List(value=dst_labels)),
+        'image/object/truncated' : tf.train.Feature(int64_list=tf.train.Int64List(value=dst_truncateds)),
+        'image/format' : tf.train.Feature(bytes_list=tf.train.BytesList(value=[fmt.encode('utf-8')])),
+        'image/object/class/text' : tf.train.Feature(bytes_list=tf.train.BytesList(value=dst_texts)),
+        'image/source_id' : tf.train.Feature(bytes_list=tf.train.BytesList(value=[source_id.encode('utf-8')])),
+        'image/object/view' :tf.train.Feature(bytes_list=tf.train.BytesList(value=dst_views)),
+        'image/object/difficult' : tf.train.Feature(int64_list=tf.train.Int64List(value=dst_difficults)),
+        'image/key/sha256': tf.train.Feature(bytes_list=tf.train.BytesList(value=[sha256.encode('utf-8')]))
     }))
+#, 'image/key/sha256': bytes_list {
     return example
 
 
@@ -176,7 +206,7 @@ if __name__ == '__main__':
             #org_feature = parse_record(input_file)
 
             #get values
-            classnames, bimage, xmaxs, ymaxs, xmins, ymins, labels, org_height, org_width, org_fname, fmt = get_instances(parsed_feature)
+            classnames, bimage, xmaxs, ymaxs, xmins, ymins, labels, org_height, org_width, org_fname, fmt, truncated, text, source_id, view, difficult, sha256  = get_instances(parsed_feature)
         except:
             print("skipping Error file : " + input_file)
             continue
@@ -187,10 +217,9 @@ if __name__ == '__main__':
             continue
         ## is November data
         decode_name = classnames[0].decode('utf-8')
-        if is_november(decode_name):
+        if False:
+        #if is_november(decode_name):
             print(" skipping november's file : " + input_file)
-            continue
-        if not 'video' in org_fname:
             continue
 
         #trans norm points to denorm points
@@ -207,7 +236,7 @@ if __name__ == '__main__':
         #split images processing
         for idx, img in enumerate(sp_imgs):
             ystep, xstep, _ = img.shape
-            dst_xmaxs, dst_ymaxs, dst_xmins, dst_ymins, dst_labels = in_range(points[idx],xmaxs, ymaxs, xmins, ymins, labels)
+            dst_xmaxs, dst_ymaxs, dst_xmins, dst_ymins, dst_labels, dst_difficults, dst_views, dst_texts, dst_truncateds = in_range(points[idx],xmaxs, ymaxs, xmins, ymins, labels, difficult, view, text, truncated)
             if len(dst_xmaxs) ==0:
                 continue
 
@@ -218,6 +247,8 @@ if __name__ == '__main__':
             #write record
             record_name = os.path.join(output_path, os.path.splitext(os.path.basename(input_file))[0] + str(idx)  + '.tfrecord')
             writer = tf.python_io.TFRecordWriter(record_name)
-            example = put_example(ystep, xstep, img, org_fname, fmt, dst_xmaxs, dst_ymaxs, dst_xmins, dst_ymins, dst_labels)
+            example = put_example(ystep, xstep, img, org_fname, fmt, dst_xmaxs, dst_ymaxs, dst_xmins, dst_ymins, dst_labels, dst_difficults, dst_views, dst_texts, dst_truncateds, source_id, sha256)
             writer.write(example.SerializeToString())
-            print(' saved : ' + record_name)
+        print(' saved : ' + record_name)
+        print("DEBUG QUIT")
+        quit()

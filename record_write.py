@@ -124,11 +124,6 @@ def in_range(point, xmaxs, ymaxs, xmins, ymins, labels, difficult, view, text, t
     dst_views       = []
     dst_texts       = []
     dst_truncateds  = []
-    print("hogeeeee")
-    print(type(difficult))
-    print(type(view))
-    print(type(text))
-    print(type(truncated))
     for idx, xmax, ymax, xmin, ymin, label, diff, v, t, trunc  in zip(range(len(xmaxs)), xmaxs, ymaxs, xmins, ymins, labels, difficult, view, text, truncated):
         if not point[0] < xmax < point[2]:
             continue
@@ -217,8 +212,7 @@ if __name__ == '__main__':
             continue
         ## is November data
         decode_name = classnames[0].decode('utf-8')
-        if False:
-        #if is_november(decode_name):
+        if not 'video' in org_fname or is_november(decode_name):
             print(" skipping november's file : " + input_file)
             continue
 
@@ -249,6 +243,3 @@ if __name__ == '__main__':
             writer = tf.python_io.TFRecordWriter(record_name)
             example = put_example(ystep, xstep, img, org_fname, fmt, dst_xmaxs, dst_ymaxs, dst_xmins, dst_ymins, dst_labels, dst_difficults, dst_views, dst_texts, dst_truncateds, source_id, sha256)
             writer.write(example.SerializeToString())
-        print(' saved : ' + record_name)
-        print("DEBUG QUIT")
-        quit()

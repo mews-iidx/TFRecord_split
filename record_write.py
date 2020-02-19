@@ -10,14 +10,12 @@ import sys
 import glob
 import copy
 from calc_offset import split_img
+from calc_offset import concat_img
 
 #definitions 
-XCNT = 13
-YCNT = 8
+XCNT = 5
+YCNT = 5
 OFFSET_SIZE = 100
-
-def usage():
-    print('Usage: ' + sys.argv[0] + ' <records_dir_path> <output_dir_path> <x_cnt> <y_cnt>')
 
 def pil2cv(image):
     new_image = np.array(image, dtype=np.uint8)
@@ -182,21 +180,18 @@ def get_imgidx(idx, xcnt, ycnt):
 
 
 if __name__ == '__main__':
-    argc = len(sys.argv)
-    if argc < 5:
-        usage()
-        quit()
-    input_path = sys.argv[1]
-    output_path = sys.argv[2]
-    x_cnt = int(sys.argv[3])
-    y_cnt = int(sys.argv[4])
+    input_path = './data/'
+    output_path = './test'
+    x_cnt = XCNT
+    y_cnt = YCNT
 
     if not os.path.exists(output_path):
         os.mkdir(output_path)
 
     input_files = glob.glob(os.path.join(input_path, '*.tfrecord'))
+    sorted(input_files)
 
-    for input_file in input_files:
+    for input_file in input_files[:10]:
         try:
             parsed_feature = parse_record(input_file) # parse and return
             #TODO: delete line of the below 
@@ -207,16 +202,18 @@ if __name__ == '__main__':
         except:
             print("skipping Error file : " + input_file)
             continue
+        if not '1070201_30164_2017-02-27_112257_22617_124725' in org_fname:
+            continue
         
-        #ignore cases
-        ## is no object 
-        if len(classnames) == 0 :
-            continue
-        ## is November data
-        decode_name = classnames[0].decode('utf-8')
-        if not 'video' in org_fname or is_november(decode_name):
-            print(" skipping november's file : " + input_file)
-            continue
+        ##ignore cases
+        ### is no object 
+        #if len(classnames) == 0 :
+        #    continue
+        ### is November data
+        #decode_name = classnames[0].decode('utf-8')
+        #if not 'video' in org_fname or is_november(decode_name):
+        #    print(" skipping november's file : " + input_file)
+        #    continue
 
 
         #trans norm points to denorm points
@@ -230,19 +227,39 @@ if __name__ == '__main__':
         ycnt = y_cnt
         sp_imgs, points = split_img(img, xcnt, ycnt, offset_size=OFFSET_SIZE)
 
+        cp_imgs = []
         #split images processing
         for idx, img in enumerate(sp_imgs):
             ystep, xstep, _ = img.shape
             dst_xmaxs, dst_ymaxs, dst_xmins, dst_ymins, dst_labels, dst_difficults, dst_views, dst_texts, dst_truncateds = in_range(points[idx],xmaxs, ymaxs, xmins, ymins, labels, difficult, view, text, truncated)
-            if len(dst_xmaxs) ==0:
-                continue
+            #if len(dst_xmaxs) ==0:
+            #    continue
+            #cv2.imshow(str(idx), img)
+            #cv2.waitKey(0)
 
             x, y = get_imgidx(idx, xcnt, ycnt)
             dst_xmaxs, dst_ymaxs, dst_xmins, dst_ymins = point2child_point(x, y, xstep, ystep, dst_xmaxs, dst_ymaxs, dst_xmins, dst_ymins)
+            start = (0, 0)
+            stop = (img.shape[1], img.shape[0])
+            cp_img = img.copy()
+            cv2.rectangle(cp_img, start, stop, (255,255,0), 5)
+            for xmin, ymin, xmax, ymax in zip(dst_xmins, dst_ymins, dst_xmaxs, dst_ymaxs):
+                start = (int(xmin), int(ymin))
+                stop  = (int(xmax), int(ymax))
+                print(start, stop)
+                cv2.rectangle(cp_img, start, stop, (255,0,255), 5)
+                #cv2.imshow('img', img)
+                #cv2.waitKey(0)
+            cp_imgs.append(cp_img)
             dst_xmaxs, dst_ymaxs, dst_xmins, dst_ymins = norm(xstep, ystep, dst_xmaxs, dst_ymaxs, dst_xmins, dst_ymins)
+        print(len(cp_imgs))
+        concat = concat_img(cp_imgs, xcnt, ycnt)
+        cv2.imshow('concat', concat)
+        cv2.waitKey(0)
 
             #write record
-            record_name = os.path.join(output_path, os.path.splitext(os.path.basename(input_file))[0] + str(idx)  + '.tfrecord')
-            writer = tf.python_io.TFRecordWriter(record_name)
-            example = put_example(ystep, xstep, img, org_fname, fmt, dst_xmaxs, dst_ymaxs, dst_xmins, dst_ymins, dst_labels, dst_difficults, dst_views, dst_texts, dst_truncateds, source_id, sha256)
-            writer.write(example.SerializeToString())
+            #record_name = os.path.join(output_path, os.path.splitext(os.path.basename(input_file))[0] + str(idx)  + '.tfrecord')
+            #print(record_name)
+            #writer = tf.python_io.TFRecordWriter(record_name)
+            #example = put_example(ystep, xstep, img, org_fname, fmt, dst_xmaxs, dst_ymaxs, dst_xmins, dst_ymins, dst_labels, dst_difficults, dst_views, dst_texts, dst_truncateds, source_id, sha256)
+            #writer.write(example.SerializeToString())

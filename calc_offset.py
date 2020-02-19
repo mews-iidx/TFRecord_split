@@ -53,7 +53,7 @@ def concat_img(sp_imgs, x_cnt, y_cnt):
 	h_imgs = []
 	for y in range(y_cnt):
 	    idxs = [ i + y*y_cnt for i in range(x_cnt) ]
-	    imgs = [dst_imgs[i] for i in idxs]
+	    imgs = [sp_imgs[i] for i in idxs]
 	    h_imgs.append(cv2.hconcat(imgs))
 	concat_img = cv2.vconcat(h_imgs)
 	return concat_img

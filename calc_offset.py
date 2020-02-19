@@ -75,7 +75,7 @@ def concat_img(sp_imgs, x_cnt, y_cnt):
 
 
 if __name__ == '__main__':
-    img = cv2.imread('/home/yamauchi/Downloads/titanfall2.jpg')
+    img = cv2.imread('test.jpg')
     x_cnt = 2
     y_cnt = 4
     print('original shape', img.shape)

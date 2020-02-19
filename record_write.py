@@ -13,8 +13,8 @@ from calc_offset import split_img
 from calc_offset import concat_img
 
 #definitions 
-XCNT = 5
-YCNT = 5
+XCNT = 6
+YCNT = 6
 OFFSET_SIZE = 100
 
 def pil2cv(image):
@@ -103,12 +103,16 @@ def norm(org_width, org_height, xmaxs, ymaxs, xmins, ymins):
     norm_point(org_height, ymins)
     return xmaxs, ymaxs, xmins, ymins
     
-def point2child_point(xidx, yidx, xstep, ystep, xmaxs, ymaxs, xmins, ymins):
+def point2child_point(xidx, yidx, xstep, ystep, xmaxs, ymaxs, xmins, ymins, points):
     for idx, xmax, ymax, xmin, ymin in zip(range(len(xmaxs)), xmaxs, ymaxs, xmins, ymins):
-        xmaxs[idx] = int(xmax - ((xidx * xstep))) + (OFFSET_SIZE + OFFSET_SIZE/2) * xidx
-        ymaxs[idx] = int(ymax - ((yidx * ystep))) + (OFFSET_SIZE + OFFSET_SIZE/2) * yidx
-        xmins[idx] = int(xmin - ((xidx * xstep))) + (OFFSET_SIZE + OFFSET_SIZE/2) * xidx
-        ymins[idx] = int(ymin - ((yidx * ystep))) + (OFFSET_SIZE + OFFSET_SIZE/2) * yidx
+        xmaxs[idx] = int(xmax - points[0])
+        ymaxs[idx] = int(ymax - points[1])
+        xmins[idx] = int(xmin - points[0])
+        ymins[idx] = int(ymin - points[1])
+        #xmaxs[idx] = int(xmax - ((xidx * xstep))) + (OFFSET_SIZE + OFFSET_SIZE/2) * xidx
+        #ymaxs[idx] = int(ymax - ((yidx * ystep))) + (OFFSET_SIZE + OFFSET_SIZE/2) * yidx
+        #xmins[idx] = int(xmin - ((xidx * xstep))) + (OFFSET_SIZE + OFFSET_SIZE/2) * xidx
+        #ymins[idx] = int(ymin - ((yidx * ystep))) + (OFFSET_SIZE + OFFSET_SIZE/2) * yidx
     return xmaxs, ymaxs, xmins, ymins
 
 def in_range(point, xmaxs, ymaxs, xmins, ymins, labels, difficult, view, text, truncated):
@@ -217,6 +221,8 @@ if __name__ == '__main__':
 
 
         #trans norm points to denorm points
+        print(" -- original size -- ")
+        print(org_width, org_height)
         xmaxs, ymaxs, xmins, ymins = denorm(org_width, org_height, xmaxs, ymaxs, xmins, ymins)
 
         #trans bytes to opencv img
@@ -226,6 +232,8 @@ if __name__ == '__main__':
         xcnt = x_cnt
         ycnt = y_cnt
         sp_imgs, points = split_img(img, xcnt, ycnt, offset_size=OFFSET_SIZE)
+        for p in points:
+            print(p)
 
         cp_imgs = []
         #split images processing
@@ -238,7 +246,7 @@ if __name__ == '__main__':
             #cv2.waitKey(0)
 
             x, y = get_imgidx(idx, xcnt, ycnt)
-            dst_xmaxs, dst_ymaxs, dst_xmins, dst_ymins = point2child_point(x, y, xstep, ystep, dst_xmaxs, dst_ymaxs, dst_xmins, dst_ymins)
+            dst_xmaxs, dst_ymaxs, dst_xmins, dst_ymins = point2child_point(x, y, xstep, ystep, dst_xmaxs, dst_ymaxs, dst_xmins, dst_ymins, points[idx])
             start = (0, 0)
             stop = (img.shape[1], img.shape[0])
             cp_img = img.copy()
@@ -246,16 +254,15 @@ if __name__ == '__main__':
             for xmin, ymin, xmax, ymax in zip(dst_xmins, dst_ymins, dst_xmaxs, dst_ymaxs):
                 start = (int(xmin), int(ymin))
                 stop  = (int(xmax), int(ymax))
-                print(start, stop)
                 cv2.rectangle(cp_img, start, stop, (255,0,255), 5)
                 #cv2.imshow('img', img)
                 #cv2.waitKey(0)
             cp_imgs.append(cp_img)
             dst_xmaxs, dst_ymaxs, dst_xmins, dst_ymins = norm(xstep, ystep, dst_xmaxs, dst_ymaxs, dst_xmins, dst_ymins)
-        print(len(cp_imgs))
         concat = concat_img(cp_imgs, xcnt, ycnt)
         cv2.imshow('concat', concat)
         cv2.waitKey(0)
+        cv2.imwrite('concat.jpg', concat)
 
             #write record
             #record_name = os.path.join(output_path, os.path.splitext(os.path.basename(input_file))[0] + str(idx)  + '.tfrecord')

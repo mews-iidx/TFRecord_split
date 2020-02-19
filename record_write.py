@@ -12,12 +12,12 @@ import copy
 from calc_offset import split_img
 
 #definitions 
-XCNT = 3
-YCNT = 3
+XCNT = 13
+YCNT = 8
 OFFSET_SIZE = 100
 
 def usage():
-    print('Usage: ' + sys.argv[0] + ' <records_dir_path> <output_dir_path>')
+    print('Usage: ' + sys.argv[0] + ' <records_dir_path> <output_dir_path> <x_cnt> <y_cnt>')
 
 def pil2cv(image):
     new_image = np.array(image, dtype=np.uint8)
@@ -183,11 +183,13 @@ def get_imgidx(idx, xcnt, ycnt):
 
 if __name__ == '__main__':
     argc = len(sys.argv)
-    if argc < 3:
+    if argc < 5:
         usage()
         quit()
     input_path = sys.argv[1]
     output_path = sys.argv[2]
+    x_cnt = int(sys.argv[3])
+    y_cnt = int(sys.argv[4])
 
     if not os.path.exists(output_path):
         os.mkdir(output_path)
@@ -216,6 +218,7 @@ if __name__ == '__main__':
             print(" skipping november's file : " + input_file)
             continue
 
+
         #trans norm points to denorm points
         xmaxs, ymaxs, xmins, ymins = denorm(org_width, org_height, xmaxs, ymaxs, xmins, ymins)
 
@@ -223,8 +226,8 @@ if __name__ == '__main__':
         img = byte2cv(bimage)
 
         #split image xcnt x ycnt
-        xcnt = XCNT
-        ycnt = YCNT
+        xcnt = x_cnt
+        ycnt = y_cnt
         sp_imgs, points = split_img(img, xcnt, ycnt, offset_size=OFFSET_SIZE)
 
         #split images processing

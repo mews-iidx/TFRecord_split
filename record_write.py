@@ -17,6 +17,9 @@ XCNT = 6
 YCNT = 6
 OFFSET_SIZE = 100
 
+def usage():
+    print('Usage: ' + sys.argv[0] + ' <records_dir_path> <output_dir_path> <x_cnt> <y_cnt>')
+
 def pil2cv(image):
     new_image = np.array(image, dtype=np.uint8)
     if new_image.ndim == 2:
@@ -109,10 +112,6 @@ def point2child_point(xidx, yidx, xstep, ystep, xmaxs, ymaxs, xmins, ymins, poin
         ymaxs[idx] = int(ymax - points[1])
         xmins[idx] = int(xmin - points[0])
         ymins[idx] = int(ymin - points[1])
-        #xmaxs[idx] = int(xmax - ((xidx * xstep))) + (OFFSET_SIZE + OFFSET_SIZE/2) * xidx
-        #ymaxs[idx] = int(ymax - ((yidx * ystep))) + (OFFSET_SIZE + OFFSET_SIZE/2) * yidx
-        #xmins[idx] = int(xmin - ((xidx * xstep))) + (OFFSET_SIZE + OFFSET_SIZE/2) * xidx
-        #ymins[idx] = int(ymin - ((yidx * ystep))) + (OFFSET_SIZE + OFFSET_SIZE/2) * yidx
     return xmaxs, ymaxs, xmins, ymins
 
 def in_range(point, xmaxs, ymaxs, xmins, ymins, labels, difficult, view, text, truncated):
@@ -184,10 +183,14 @@ def get_imgidx(idx, xcnt, ycnt):
 
 
 if __name__ == '__main__':
-    input_path = './data/'
-    output_path = './test'
-    x_cnt = XCNT
-    y_cnt = YCNT
+    argc = len(sys.argv)
+    if argc < 5:
+        usage()
+        quit()
+    input_path = sys.argv[1]
+    output_path = sys.argv[2]
+    x_cnt = int(sys.argv[3])
+    y_cnt = int(sys.argv[4])
 
     if not os.path.exists(output_path):
         os.mkdir(output_path)
@@ -195,34 +198,27 @@ if __name__ == '__main__':
     input_files = glob.glob(os.path.join(input_path, '*.tfrecord'))
     sorted(input_files)
 
-    for input_file in input_files[:10]:
+    for input_file in input_files:
         try:
             parsed_feature = parse_record(input_file) # parse and return
-            #TODO: delete line of the below 
-            #org_feature = parse_record(input_file)
 
             #get values
             classnames, bimage, xmaxs, ymaxs, xmins, ymins, labels, org_height, org_width, org_fname, fmt, truncated, text, source_id, view, difficult, sha256  = get_instances(parsed_feature)
         except:
             print("skipping Error file : " + input_file)
             continue
-        if not '1070201_30164_2017-02-27_112257_22617_124725' in org_fname:
+        #ignore cases
+        ## is no object 
+        if len(classnames) == 0 :
             continue
-        
-        ##ignore cases
-        ### is no object 
-        #if len(classnames) == 0 :
-        #    continue
-        ### is November data
-        #decode_name = classnames[0].decode('utf-8')
-        #if not 'video' in org_fname or is_november(decode_name):
-        #    print(" skipping november's file : " + input_file)
-        #    continue
+        ## is November data
+        decode_name = classnames[0].decode('utf-8')
+        if not 'video' in org_fname or is_november(decode_name):
+            print(" skipping november's file : " + input_file)
+            continue
 
 
         #trans norm points to denorm points
-        print(" -- original size -- ")
-        print(org_width, org_height)
         xmaxs, ymaxs, xmins, ymins = denorm(org_width, org_height, xmaxs, ymaxs, xmins, ymins)
 
         #trans bytes to opencv img
@@ -232,41 +228,19 @@ if __name__ == '__main__':
         xcnt = x_cnt
         ycnt = y_cnt
         sp_imgs, points = split_img(img, xcnt, ycnt, offset_size=OFFSET_SIZE)
-        for p in points:
-            print(p)
 
-        cp_imgs = []
-        #split images processing
         for idx, img in enumerate(sp_imgs):
             ystep, xstep, _ = img.shape
             dst_xmaxs, dst_ymaxs, dst_xmins, dst_ymins, dst_labels, dst_difficults, dst_views, dst_texts, dst_truncateds = in_range(points[idx],xmaxs, ymaxs, xmins, ymins, labels, difficult, view, text, truncated)
-            #if len(dst_xmaxs) ==0:
-            #    continue
-            #cv2.imshow(str(idx), img)
-            #cv2.waitKey(0)
+            if len(dst_xmaxs) ==0:
+                continue
 
             x, y = get_imgidx(idx, xcnt, ycnt)
             dst_xmaxs, dst_ymaxs, dst_xmins, dst_ymins = point2child_point(x, y, xstep, ystep, dst_xmaxs, dst_ymaxs, dst_xmins, dst_ymins, points[idx])
-            start = (0, 0)
-            stop = (img.shape[1], img.shape[0])
-            cp_img = img.copy()
-            cv2.rectangle(cp_img, start, stop, (255,255,0), 5)
-            for xmin, ymin, xmax, ymax in zip(dst_xmins, dst_ymins, dst_xmaxs, dst_ymaxs):
-                start = (int(xmin), int(ymin))
-                stop  = (int(xmax), int(ymax))
-                cv2.rectangle(cp_img, start, stop, (255,0,255), 5)
-                #cv2.imshow('img', img)
-                #cv2.waitKey(0)
-            cp_imgs.append(cp_img)
             dst_xmaxs, dst_ymaxs, dst_xmins, dst_ymins = norm(xstep, ystep, dst_xmaxs, dst_ymaxs, dst_xmins, dst_ymins)
-        concat = concat_img(cp_imgs, xcnt, ycnt)
-        cv2.imshow('concat', concat)
-        cv2.waitKey(0)
-        cv2.imwrite('concat.jpg', concat)
 
             #write record
-            #record_name = os.path.join(output_path, os.path.splitext(os.path.basename(input_file))[0] + str(idx)  + '.tfrecord')
-            #print(record_name)
-            #writer = tf.python_io.TFRecordWriter(record_name)
-            #example = put_example(ystep, xstep, img, org_fname, fmt, dst_xmaxs, dst_ymaxs, dst_xmins, dst_ymins, dst_labels, dst_difficults, dst_views, dst_texts, dst_truncateds, source_id, sha256)
-            #writer.write(example.SerializeToString())
+            record_name = os.path.join(output_path, os.path.splitext(os.path.basename(input_file))[0] + str(idx)  + '.tfrecord')
+            writer = tf.python_io.TFRecordWriter(record_name)
+            example = put_example(ystep, xstep, img, org_fname, fmt, dst_xmaxs, dst_ymaxs, dst_xmins, dst_ymins, dst_labels, dst_difficults, dst_views, dst_texts, dst_truncateds, source_id, sha256)
+            writer.write(example.SerializeToString())

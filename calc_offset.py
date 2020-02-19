@@ -7,35 +7,26 @@ OFFSETS = [[ (   0,   0,   1,   1), (-0.5,   0, 0.5,   1), (  -1,   0,   0,   1)
 def get_offset(x, y, x_cnt, y_cnt):
     # corners
     if x == 0 and y == 0:
-        print(" C0")
         return OFFSETS[0][0]
     if x == x_cnt-1 and y == 0:
-        print(" C1")
         return OFFSETS[0][-1]
     if x == 0 and y == y_cnt-1:
-        print(" C2")
         return OFFSETS[-1][0]
     if x == x_cnt-1 and y == y_cnt-1:
-        print(" C3")
         return OFFSETS[-1][-1]
 
     # corner and into range
     if 0 < x < x_cnt-1 and y == 0:
-        print(" A")
         return OFFSETS[0][1]
     if 0 < x < x_cnt-1 and y == y_cnt-1:
-        print(" B")
         return OFFSETS[-1][1]
     if x == 0 and 0 < y < y_cnt-1:
-        print(" C")
         return OFFSETS[1][0]
     if x == x_cnt-1 and 0 < y < y_cnt-1:
-        print(" D")
         return OFFSETS[1][-1]
 
     # center
     else:
-        print(" CENTER")
         return OFFSETS[1][1]
 
 def split_img(img, x_cnt, y_cnt, offset_size=100):
@@ -48,16 +39,11 @@ def split_img(img, x_cnt, y_cnt, offset_size=100):
     for y in range(y_cnt):
         for x in range(x_cnt):
             offsets = get_offset(x, y, x_cnt, y_cnt)
-            print(" offsets," , offsets)
             start_x = int((x*w_step)     + (offsets[0] * offset_size))
             start_y = int((y*h_step)     + (offsets[1] * offset_size))
             stop_x  = int(((x+1)*w_step) + (offsets[2] * offset_size))
             stop_y  = int(((y+1)*h_step) + (offsets[3] * offset_size))
 
-            print(offsets[0] * offset_size)
-            print(offsets[1] * offset_size)
-            print(offsets[2] * offset_size)
-            print(offsets[3] * offset_size)
             sp_img = cp_img[start_y:stop_y, start_x:stop_x, :]
             sp_imgs.append(sp_img)
             points.append([start_x, start_y, stop_x, stop_y])
